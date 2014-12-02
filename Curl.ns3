@@ -1,0 +1,273 @@
+Newspeak3
+'Curl'
+class Curl usingPlatform: platform = (
+"A higher-level wrapper around the raw libcurl API. See the documentation of CurlRequest, which is the main class of this module. CurlSession is pretty much its implementation helper.
+
+Copyright (c) 2010 Vassili Bykov"|
+	private CAPI = platform namespace CAPI.
+	private VMMirror = platform mirrors vmmirror.	
+	private api = CurlAPI usingPlatform: platform.
+	
+	private Alien = platform aliens Alien.
+	private OrderedCollection = platform collections OrderedCollection.
+
+	CurlWriteFunctionArgs = platform blackMarket CurlWriteFunctionArgs.
+	curlLibrary = api CurlLibrary name: api CurlLibrary libName.
+|api addLibrary: curlLibrary)
+(
+class CurlAPI usingPlatform: platform = CAPI platform: platform (
+"The low-level interface to the libcurl library."|
+|)
+(
+class CurlLibrary name: name = CLibrary name: name (
+"This class allows to access curl_easy_* functions from the CURL C library."|
+|)
+('as yet unclassified'
+curl_easy_cleanup = (
+	"void curl_easy_cleanup(CURL * handle );"
+	^functionNamed: #curl_easy_cleanup argc: 1
+)
+curl_easy_init = (
+	"CURL *curl_easy_init();"
+	^functionNamed: #curl_easy_init argc: 0
+)
+curl_easy_perform = (
+	"URLcode curl_easy_perform(CURL * handle );"
+	^functionNamed: #curl_easy_perform argc: 1
+)
+curl_easy_setopt = (
+	"CURLcode curl_easy_setopt(CURL *handle, CURLoption option, parameter);"
+	^functionNamed: #curl_easy_setopt argc: 3
+)
+curl_global_cleanup = (
+	"void curl_global_cleanup(void);"
+	^functionNamed: #curl_global_cleanup argc: 0
+)
+curl_global_init = (
+	"CURLcode curl_global_init(long flags);"
+	^functionNamed: #curl_global_init argc: 1
+)
+exportFunctionsTo: curlApi = (
+	curlApi
+		exportFunction: curl_easy_cleanup;
+		exportFunction: curl_easy_init;
+		exportFunction: curl_easy_perform;
+		exportFunction: curl_easy_setopt;
+		exportFunction: curl_global_init;
+		exportFunction: curl_global_cleanup
+)) : ('as yet unclassified'
+libName = (
+	VMMirror isWindows ifTrue: [^ 'libcurl.dll'].
+	VMMirror isUnixMac ifTrue: [^ '/opt/local/lib/libcurl.dylib'].
+	^'libcurl.so.4'.
+))'as yet unclassified'
+CURLOPT_COOKIE = (
+	^10022
+)
+CURLOPT_COPYPOSTFIELDS = (
+	^10165
+)
+CURLOPT_HEADERFUNCTION = (
+	^20079
+)
+CURLOPT_POST = (
+	^47
+)
+CURLOPT_POSTFIELDS = (
+	^10015
+)
+CURLOPT_PROXY = (
+	^10004
+)
+CURLOPT_SSLCERT = (
+	^10025
+)
+CURLOPT_SSLCERTTYPE = (
+	^10086
+)
+CURLOPT_SSLKEY = (
+	^10087
+)
+CURLOPT_SSLKEYPASSWD = (
+	^10026
+)
+CURLOPT_SSLKEYTYPE = (
+	^10088
+)
+CURLOPT_SSL_VERIFYPEER = (
+	^64
+)
+CURLOPT_URL = (
+	^10002
+)
+CURLOPT_WRITEFUNCTION = (
+	^20011
+)
+CURL_GLOBAL_ALL = (
+	^CURL_GLOBAL_SSL | CURL_GLOBAL_WIN32
+)
+CURL_GLOBAL_SSL = (
+	^1
+)
+CURL_GLOBAL_WIN32 = (
+	^2
+)) : ()
+class CurlRequest url: url <String> = (
+"A request to fetch a document using Curl. An instance is created using the default factory method. It can then be configured by changing its slots such as proxy, sslKey and so on. Finally, send the #send message to actually send the request. The value returned from #send is a libcurl's error code, 0 in case of success. The text received from the server is available by sending #result to the instance. Alternatively, set the resultStream slot before sending the request to a WriteStream that will accept the result."|
+	url_ <String> = url.
+
+	"The following slots are settable by the user to configure the request before sending."
+	postFields <String>
+	cookie <String>
+	proxy <String>
+	sslKey <String>
+	sslKeyType <String>
+	sslKeyPasswd <String>
+	sslCert <String>
+	sslCertType <String>
+	sslVerifyPeer <Boolean>
+	collectHeaders <Boolean> = false.
+
+	resultStream <Stream>
+	headers <OrderedCollection[String]>
+	getFields <Dictionary>
+	private handle
+	private writeCallback
+	private headerCallback
+|)
+('as yet unclassified'
+acceptData: args <CurlWriteFunctionArgs> = (
+"This is the callback provided to curl. Called multiple times in the course of receiving data. Must return the number of bytes accepted."
+	| dataSize data |
+	dataSize:: args size * args nmemb.
+	data:: args ptrAlien.
+	1 to: dataSize do:
+		[:byteIndex |
+		resultStream nextPut: (Character value: (data unsignedByteAt: byteIndex))].
+	^dataSize
+)
+acceptHeader: args <CurlWriteFunctionArgs> = (
+"This is the callback provided to curl. Called multiple times in the course of receiving data. Must return the number of bytes accepted."
+	| dataSize data header |
+	dataSize:: args size * args nmemb.
+	data:: args ptrAlien.
+	header:: String new: dataSize.
+	1 to: dataSize do:
+		[:byteIndex |
+		header at: byteIndex put: (Character value: (data unsignedByteAt: byteIndex))].
+	headers add: header.
+	^dataSize
+)
+closeCurlSession = (
+	handle ~=0 ifTrue: [api curl_easy_cleanup value: handle].
+	handle:: 0.
+	writeCallback:: nil
+)
+isPostRequest = (
+	^postFields notNil
+)
+openCurlSession = (
+	handle:: api curl_easy_init unsignedValue.
+	handle ~= 0 ifTrue:
+		[writeCallback:: api Callback
+			block: [:args :result | result returnInteger: (acceptData: args)]
+			argsClass: CurlWriteFunctionArgs].
+)
+result = (
+	^resultStream contents
+)
+send = (
+	| errorCode |
+	openCurlSession.
+	resultStream ifNil: [resultStream:: (String new: 100) writeStream].
+	setupCurlSession.
+	errorCode:: api curl_easy_perform unsignedValue: handle.
+	closeCurlSession.
+	^errorCode
+)
+setCurlOption: code to: value = (
+	api curl_easy_setopt value: handle value: code value: value
+)
+setCurlOption: code toString: string = (
+"Pass a string option to libcurl, taking care of C string conversion boilerplate."
+	(Alien newCString: string) freeAfter:
+		[:cString |
+		api curl_easy_setopt value: handle value: code value: cString address]
+)
+setupCurlSession = (
+	setCurlOption: api CURLOPT_URL toString: url.
+	setCurlOption: api CURLOPT_WRITEFUNCTION to: writeCallback thunk.
+	postFields notNil ifTrue:
+		[setCurlOption: api CURLOPT_POST to: 1.
+		setCurlOption: api CURLOPT_COPYPOSTFIELDS toString: postFields].
+	cookie notNil ifTrue:
+		[setCurlOption: api CURLOPT_COOKIE toString: cookie].
+	proxy notNil ifTrue:
+		[setCurlOption: api CURLOPT_PROXY toString: proxy].
+	sslCert notNil ifTrue:
+		[setCurlOption: api CURLOPT_SSLCERT toString: sslCert].
+	sslCertType notNil ifTrue:
+		[setCurlOption: api CURLOPT_SSLCERTTYPE toString: sslCertType].
+	sslKey notNil ifTrue:
+		[setCurlOption: api CURLOPT_SSLKEY toString: sslKey].
+	sslKeyType notNil ifTrue:
+		[setCurlOption: api CURLOPT_SSLKEYTYPE toString: sslKeyType].
+	sslKeyPasswd notNil ifTrue:
+		[setCurlOption: api CURLOPT_SSLKEYPASSWD toString: sslKeyPasswd].
+	sslVerifyPeer notNil ifTrue:
+		[setCurlOption: api CURLOPT_SSL_VERIFYPEER to:
+			(sslVerifyPeer ifTrue: [1] ifFalse: [0])].
+	collectHeaders ifTrue: [setupToCollectHeaders]
+)
+setupToCollectHeaders = (
+	headers:: OrderedCollection new.
+	headerCallback:: api Callback
+		block: [:args :result | result returnInteger: (acceptHeader: args)]
+		argsClass: api CurlWriteFunctionArgs.
+	setCurlOption: api CURLOPT_HEADERFUNCTION to: headerCallback thunk.
+)
+url = (
+	^url_
+)) : ()
+class CurlSession = (
+"A libcurl session; creating an object opens a session (unless a problem occurs in which case the session returns false to the isOpen message). An open instance can be sent the get: message to send a request for a URL."|
+	private handle = 0.
+	private writeCallback
+	private resultStream
+|initializeSession)
+('as yet unclassified'
+close = (
+	isOpen ifTrue:
+		[api curl_easy_cleanup value: handle.
+		handle:: 0]
+)
+get: url <String> = (
+	| cUrl |
+	cUrl:: Alien newCString: url.
+	resultStream:: (String new: 100) writeStream.
+	api curl_easy_setopt value: handle value: api CURLOPT_URL value: cUrl address.
+	api curl_easy_setopt value: handle value: api CURLOPT_WRITEFUNCTION value: writeCallback thunk.
+	api curl_easy_perform value: handle.
+	cUrl free.
+)
+initializeSession = (
+"Initialization, invoked from the initializer."
+	handle:: api curl_easy_init unsignedValue.
+	handle ~= 0 ifTrue:
+		[writeCallback:: api Callback
+			block: [:args :result | result returnInteger: (writeData: args)]
+			argsClass: CurlWriteFunctionArgs]
+)
+isOpen = (
+	^handle ~= 0
+)
+writeData: args <CurlWriteFunctionArgs> = (
+"This method is the writeCallback response code. It should accept the data passed to the callback, available through the argument and return the number of bytes accepted. The number of bytes reported as accepted should be the same as the number of bytes passed in. A mismatch signals an error to libcurl."
+	| dataSize data |
+	dataSize:: args size * args nmemb.
+	data:: args ptrAlien.
+	1 to: dataSize do:
+		[:byteIndex |
+		resultStream nextPut: (Character value: (data unsignedByteAt: byteIndex))].
+	^dataSize
+)) : ()) : ()

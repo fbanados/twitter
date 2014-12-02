@@ -1,0 +1,208 @@
+Newspeak3
+'SecureSocket'
+class HMACSHA1 usingPlatform: platform = (
+"This Module allows to sign a string using HMACSHA1 in every current platform for Newspeak. In windows, it uses Microsoft Crypto Libraries and in Mac and Linux expects to find the OpenSSL library (libssl).
+
+How to use it
+
+(HMACSHA1 usingPlatform: platform) hash: content usingKey: key
+"|
+	CLibrary = (platform namespace CAPI platform:platform) CLibrary.
+	Alien = platform aliens Alien.
+	win32api = platform namespace Win32API. "Required to give WinCrypt access to windows's getLastError. Unused in Mac/Linux"
+	VMMirror = platform mirrors vmmirror.
+|)
+(
+class OpenSSL = (
+"Describe the class in this comment."|
+	API = Library new.
+|API SSL_load_error_strings value.
+	API ERR_load_BIO_strings value.
+	API SSL_library_init value)
+(
+class Library = CLibrary name:'libssl' (
+"This Class contains only the needed FFI Calls to create an HMACSHA1 using OpenSSL."|
+|)
+(''
+ERR_load_BIO_strings = (
+	^ functionNamed:#ERR_load_BIO_strings argc:0.
+)
+EVP_sha1= (
+	^ functionNamed:#EVP_sha1 argc:0.
+)
+HMAC= (
+	^ functionNamed:#HMAC argc:7.
+)
+SSL_library_init = (
+	^ functionNamed:#SSL_library_init argc:0.
+)
+SSL_load_error_strings = (
+	^ functionNamed:#SSL_load_error_strings argc:0.
+)) : ()'as yet unclassified'
+hash: string usingKey: key = (
+	^ (Alien newC:64) freeAfter:[:hashBuffer |
+	(Alien newC:4) freeAfter:[:hashSize |
+	(Alien newCString: key) freeAfter:[:k |
+	(Alien newCString:string) freeAfter:[:d |
+		|hash|
+	API HMAC 
+		value: API EVP_sha1 value 
+		value: k pointer 
+		value: key size 
+		value: d pointer 
+		value: string size 
+		value:hashBuffer pointer 
+		value:hashSize pointer .
+	
+	hashBuffer copyInto:(hash:: ByteArray new: hashSize asUnsignedLong)
+			from: 1 to: hashSize asUnsignedLong in: hashBuffer startingAt:1.
+	hash.
+	]]]].
+)) : ()
+class WinCrypt = (
+"Describe the class in this comment."|
+	API = Library new.
+	getLastError = win32api KernelLibrary new GetLastError.
+|)
+(
+class Library = CLibrary name:'Advapi32' (
+"Describe the class in this comment."|
+|)
+('as yet unclassified'
+CALG_HMAC =(
+	^ 16r8009.
+)
+CALG_RC4 = (
+	^ ((3 bitShift:13) bitOr:(4 bitShift:9)) bitOr: 1.
+)
+CALG_SHA1 = (
+	^ 16r00008004.
+)
+CRYPT_VERIFYCONTEXT =(
+	^ 16rF0000000.
+)
+CryptAcquireContextA = (
+	"A is for ANSI"
+	^functionNamed:#CryptAcquireContextA argc:5.
+)
+CryptCreateHash = (
+	^functionNamed:#CryptCreateHash argc:5.
+)
+CryptDeriveKey = (
+	^functionNamed:#CryptDeriveKey argc:5.
+)
+CryptDestroyHash = (
+	^functionNamed:#CryptDestroyHash argc:1.
+)
+CryptDestroyKey = (
+	^functionNamed:#CryptDestroyKey argc:1.
+)
+CryptGetHashParam = (
+	^functionNamed:#CryptGetHashParam argc:5.
+)
+CryptHashData = (
+	^functionNamed:#CryptHashData argc:4.
+)
+CryptReleaseContext = (
+	^functionNamed:#CryptReleaseContext argc:2.
+)
+CryptSetHashParam = (
+	^functionNamed:#CryptSetHashParam argc:4.
+)
+HP_HASHVAL =(
+	^16r2.
+)
+HP_HMAC_INFO=(
+	^ 16r5.
+)
+PROV_RSA_FULL =(
+	^ 1.
+)
+sizeofHMAC_INFO = (
+	^ 28"1*sizeofInt+ 2*sizeofpointer +2*sizeofDouble"
+)) : ()'as yet unclassified'
+checkAlienNil: alien <Alien>= (
+	alien asUnsignedLong =0 ifTrue:[windowsError].
+	^ alien.
+)
+hash: string  usingKey: key= (
+	"Following the example code by Microsoft at
+	http://msdn.microsoft.com/en-us/library/aa382379(v=VS.85).aspx
+	"
+	^(Alien newCString: string) freeAfter:[:string |
+	  (Alien newCString: key) freeAfter:[:key |
+		| HmacInfo hash|
+		"new pointers"
+		(Alien newC: 4) freeAfter:[:hProv |
+		(Alien newC: 4) freeAfter:[:hHash |
+		(Alien newC: 4) freeAfter:[:hKey |
+		(Alien newC: 4) freeAfter:[:hHmacHash |
+		(Alien newC: 4) freeAfter:[:pbHash |
+		(Alien newC: 4) freeAfter:[:hashSize |
+		HmacInfo:: Alien newC: API sizeofHMAC_INFO.
+		HmacInfo unsignedLongAt:1 put: API CALG_SHA1.
+		checkAlienNil: (API CryptAcquireContextA
+				value:hProv pointer
+				value: nil asAlien value: nil asAlien 
+				value: API PROV_RSA_FULL 
+				value: API CRYPT_VERIFYCONTEXT ).
+		checkAlienNil:(API CryptCreateHash
+				value: (Alien forPointer: hProv asUnsignedLong)
+				value: API CALG_SHA1
+				value: 0 value: 0
+				value: hHash pointer).
+		checkAlienNil: (API CryptHashData
+				value: (Alien forPointer: hHash asUnsignedLong)
+				value: key pointer
+				value: key strlen
+				value: 0).
+		checkAlienNil: (API CryptDeriveKey
+				value: (Alien forPointer: hProv asUnsignedLong)
+				value: API CALG_RC4
+				value: (Alien forPointer: hHash asUnsignedLong)
+				value:0
+				value: hKey pointer).
+		checkAlienNil: (API CryptCreateHash
+				value: (Alien forPointer: hProv asUnsignedLong)
+				value: API CALG_HMAC
+				value: (Alien forPointer: hKey asUnsignedLong)
+				value: 0
+				value: hHmacHash pointer).
+		checkAlienNil: (API CryptSetHashParam
+				value: (Alien forPointer: hHmacHash asUnsignedLong)
+				value: API HP_HMAC_INFO
+				value: HmacInfo pointer
+				value: 0).
+		checkAlienNil: (API CryptHashData
+				value: (Alien forPointer: hHmacHash asUnsignedLong)
+				value: string pointer
+				value: string strlen
+				value: 0).
+		checkAlienNil: (API CryptGetHashParam
+				value: (Alien forPointer: hHmacHash asUnsignedLong)
+				value: API HP_HASHVAL
+				value: 0 "nil asAlien"
+				value: hashSize pointer
+				value: 0).
+		(Alien newC: hashSize asUnsignedLong) freeAfter:[:hashBuffer |
+			checkAlienNil:(API CryptGetHashParam
+				value: (Alien forPointer: hHmacHash asUnsignedLong)
+				value: API HP_HASHVAL
+				value: hashBuffer pointer
+				value: hashSize pointer
+				value: 0).
+		hashBuffer copyInto:(hash:: ByteArray new: hashSize asUnsignedLong)
+			from: 1 to: hashSize asUnsignedLong in: hashBuffer startingAt:1.
+		API CryptDestroyHash value: (Alien forPointer: hHmacHash asUnsignedLong).
+		API CryptDestroyKey value: (Alien forPointer: hKey asUnsignedLong).
+		API CryptDestroyHash value: (Alien forPointer: hHash asUnsignedLong).
+		API CryptReleaseContext value: (Alien forPointer: hProv asUnsignedLong) value:0.
+		hash.
+]]]]]]]]].
+)
+windowsError = (
+	^Error new messageText:'Windows Error Message value ', getLastError value asUnsignedLong;signal
+)) : ()'as yet unclassified'
+hash: string <String> usingKey: key <String>= (
+	^VMMirror isWindows ifTrue:[WinCrypt new hash:string usingKey: key] ifFalse:[OpenSSL new hash: string usingKey: key].
+)) : ()

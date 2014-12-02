@@ -1,0 +1,139 @@
+Newspeak3
+'Twitter'
+class JSONParser withParserLib: parserLibrary usingLib: platform = (
+"Experiment for JSON parser based on the description from http://www.json.org/fatfree.html "|
+	ExecutableGrammar = parserLibrary ExecutableGrammar.
+	CharParser = parserLibrary CharParser.
+	PredicateTokenParser = parserLibrary PredicateTokenParser.
+	Dictionary = platform collections Dictionary.
+	OrderedCollection = platform collections OrderedCollection.
+	Number = platform blackMarket Number.
+|)
+(
+class CharExceptForParser = PredicateTokenParser (
+"Parses any character expect for the specified."|
+
+|)
+('as yet unclassified'
+for: aChar = (
+	^self accept: [:c | c ~= aChar] errorMsg: ''
+)) : ()
+class JSONGrammar = ExecutableGrammar (
+"Experiment for JSON grammar based on the description from http://www.json.org/fatfree.html "|
+      doubleQuote = (char: $").
+      backslash = (char: $\).
+	str = doubleQuote,((backslash, ( char: $" ))   | 
+                                    (backslash, ( char: $/ ))  |
+                                    (backslash, backslash)    |
+                                    (backslash, ( char: $r ))   |
+                                    (backslash, ( char: $n ))   |
+                                    (backslash, ( char: $t ))   |
+  	                              (charExceptFor: $")) star, doubleQuote.
+	string = tokenFor: str.
+	
+	negSign = (char: $-).
+	plusSign = (char: $+).
+	digit = (charBetween: $0 and: $9).
+	dot = (char: $. ) .
+	num = negSign opt, digit, digit star, dot opt,digit star, ((char: $e) | (char: $E)) opt, (plusSign | negSign) opt,digit star.
+	number = tokenFor: num.
+	
+      leftbrace = tokenFromChar: ${.
+      rightbrace =tokenFromChar: $}.
+      colon = tokenFromChar: $:.
+      comma = tokenFromChar: $,.
+      definition = string,colon,value.
+      object =  leftbrace,  (definition starSeparatedBy: comma),rightbrace. 
+      
+
+      leftbracket = tokenFromChar: $[.
+	rightbracket = tokenFromChar: $].
+      array = leftbracket, (value starSeparatedBy: comma), rightbracket.
+      
+
+      ttrue = tokenFromSymbol: #true.
+      tfalse = tokenFromSymbol: #false.
+      null = tokenFromSymbol: #null.
+
+      value = string | number | object | array | ttrue | tfalse | null. 
+   
+|)
+('as yet unclassified'
+charExceptFor: aChar = (
+	^CharExceptForParser new for: aChar
+)) : ()
+class JSONGrammarWithAST = JSONGrammar (
+"Parses a JSON File and generates and Ast"|
+	
+|)
+('as yet unclassified'
+array = (
+	^super array wrapper: [:lb :a :rb | a  ].
+)
+flattenCharCollectionToString: collection = (
+    | newCollection |
+    newCollection:: OrderedCollection new: (collection size).
+    ^(String withAll: (flatteningCollectedString: collection to: newCollection)) 
+)
+flattenCollectedString: collection = (
+    | newCollection |
+    newCollection:: OrderedCollection new: (collection size).
+    collection do:
+          [:value | 
+	      (value isKindOf:Character)
+	          ifTrue: [newCollection addLast: value]
+	          ifFalse: [ newCollection addLast: (getEscapedValue: value) ]].
+    ^(String withAll: newCollection)
+)
+flatteningCollectedString: collection to: newCollection = (
+    collection do:
+          [:value | 
+	      (value isKindOf: Character)
+	          ifTrue: [newCollection addLast: value]
+	          ifFalse: [value isNil ifFalse:[ flatteningCollectedString: value to: newCollection ]]].
+    ^newCollection
+)
+getEscapedValue: collection <OrderedCollection> = (
+     | result | 
+     ((collection at: 2) = $n )
+         ifTrue: [result:: String lf at: 1 ]
+         ifFalse:[result:: (collection at: 2) ].
+     ^result
+)
+null = (
+	^ super null wrapper: [:o | nil].
+)
+number = (
+	^super number wrapper: [:o | Number readFrom: (flattenCharCollectionToString: (o token)) ].
+)
+object  = (
+	^super object wrapper: 
+	      [:lb :obj :rb | 
+		JSONObject withContent: 
+		               (obj inject:Dictionary new into:[:dict :e| dict at:(e at: 1) put: (e at: 3);yourself])].
+)
+parse: input  = (
+	^super value parse: input.
+)
+string  = (
+	^super string wrapper: 
+	       [:t | flattenCollectedString: (t token at: 2)].
+)
+tfalse  = (
+	^super tfalse wrapper: [:o | false].
+)
+ttrue = (
+	^super ttrue wrapper: [:o | true].
+)) : ()
+class JSONObject withContent: dContent = (
+"Instances of this class represent JSON objects."|
+	content = dContent.
+|)
+('as yet unclassified'
+doesNotUnderstand: message = (
+      | fieldName |
+      fieldName:: message selector string.
+      (fieldName beginsWith: 'json_')  
+             ifTrue: [fieldName:: fieldName allButFirst: 5].
+	^content  at: fieldName ifAbsent: [nil].
+)) : ()) : ()

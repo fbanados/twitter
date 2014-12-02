@@ -1,0 +1,303 @@
+Newspeak3
+'Twitter'
+class TwitterGUI usingPlatform: platform = (
+"A little GUI for accessing a Twitter account."|
+   HopscotchWindow = platform hopscotch core HopscotchWindow.
+   Presenter = platform hopscotch core Presenter.
+   Subject  = platform hopscotch core Subject.
+   TextEditorFragment = platform hopscotch fragments TextEditorFragment.
+   Color = platform hopscotch Color.
+   Form = platform hopscotch Form.
+   Dictionary = platform collections Dictionary.
+   TextLineEditorFragment = platform hopscotch fragments TextLineEditorFragment.
+   Button =platform hopscotch Button.
+   OAuth = platform blackMarket OAuth usingPlatform:platform.
+   JSONParser = (platform blackMarket JSONParser withParserLib: ((platform namespace BlocklessCombinatorialParsing) usingLib: platform) usingLib: platform).
+   Curl = platform blackMarket Curl Curl usingPlatform:platform.
+   streams = platform streams.
+  Number = platform blackMarket Number.
+   Unicode = platform blackMarket Unicode.
+
+	PNGReadWriter = platform blackMarket PNGReadWriter.
+	GIFReadWriter = platform blackMarket GIFReadWriter.		
+	JPEGReadWriter2 = platform blackMarket JPEGReadWriter2.
+	
+|)
+(
+class LoginPresenter onSubject: s = Presenter onSubject: s (|
+	authorizeUrl = TextEditorFragment new.
+	PIN = TextEditorFragment new.
+	username = ''.
+	password = ''.
+|authorizeUrl changeResponse: [].
+"passwordEditor changeResponse: []."
+authorizeUrl text:'https://api.twitter.com/oauth/authorize?oauth_token=',(s requestToken at:'oauth_token'))
+('as yet unclassified'
+definition = (
+	^column: {
+		row: {(label: 'OAuth Login')}.
+		row: {
+			label: 'Open the following link in a browser'.
+		}.
+		row: {
+			(elastic: authorizeUrl).
+		}.
+		row: {
+			label: 'Login with your twitter account there, authorize this app and afterwards paste the Authentication PIN here:'.
+		}.
+		row: {
+			elastic:PIN.
+		}.
+		blank: 20.
+		centered: (button: 'Authenticate' action: [login]).
+		blank: 20.
+	}
+)
+filePresenterMenu = (
+	^menuWithLabelsAndActions: {
+		'Inspect' -> [respondToInspectPresenter].
+		'Show' -> [respondToShowImplementation].
+	}
+)
+login = (
+	parent window extent: 600@500.
+	sendUp navigatorDo:[:n | n displayPresenter:
+		(TwitterMainPresenter onSubject: 
+			(TwitterMainSubject accessToken: (OAuth renew accessTokenPIN: PIN text token: (subject requestToken at:'oauth_token') tokenSecret:(subject requestToken at:'oauth_token_secret'))))].
+)
+title = (
+	^'Newspeak Twitter Client'
+)) : ()
+class LoginSubject onModel: m = Subject onModel: m (
+"Describe the class in this comment."|
+	requestToken = OAuth renew requestToken.
+|)
+('as yet unclassified'
+createPresenter = (
+	^LoginPresenter onSubject: self.
+)) : ('as yet unclassified'
+new = (
+	^onModel: nil
+))
+class TweetPresenter = Presenter (
+"Presenter for a single tweet."|	
+|)
+('as yet unclassified'
+browser = (
+	^'firefox'
+)
+componentFor: s = (
+      |result|
+	(s includesSubString: '@') 
+	ifTrue: [ result:: link: s action: [] ]
+      ifFalse: [
+	  	(string: s contains: 'http')
+		ifTrue: [ result:: link: s action: [openLink: s] ]
+		ifFalse:[ result:: label: s]
+	].
+      ^result.
+)
+convertFromUnicode: aString = (
+	|readStream writeStream|
+	readStream:: streams CharacterReadStream on:aString.
+	writeStream:: streams CharacterReadWriteStream on: String new. 
+	[readStream atEnd] whileFalse:[|next|
+	next::readStream next.
+	next = $\ ifTrue:[|second| second:: readStream next.
+		(second = $u and:[readStream atEnd not]) ifTrue:[writeStream nextPutAll:(Unicode charFromUnicode:(Number readFrom: (readStream next:4) base:16)) asString] ifFalse:[writeStream nextPut:next;nextPut:second]] ifFalse:[writeStream nextPut:next]].
+	^ writeStream contents.
+)
+definition = (
+	^(padded:( column: {
+
+	     (row: { link: (subject theTweet user screen_name) action: [] . }) color: ( Color veryVeryLightGray).
+	      row: { image: (subject theImages at: (subject theTweet user profile_image_url)) .
+	      blank: 4.
+            elastic: tweetBody}.
+
+	}) with: {3. 3. 2. 2.}) .
+	
+)
+openLink:url  = (
+      
+	OSProcess command:  (browser , ' ' , url).
+)
+string: str contains: substr  = (
+	^((str findString: substr startingAt: 1 caseSensitive: false)  > 0)
+)
+tweetBody = (
+      |  text result |
+	text: (convertFromUnicode:subject theTweet text).
+	((string: text contains: '@') or: [string: text contains: 'http'] )
+	ifTrue: [ result:: flow: ((text subStrings: {Character space}) collect: [:t | componentFor: t])]
+	ifFalse: [ result:: textDisplay: text ].
+	^result
+)) : ()
+class TweetSubject withTweet: tweet images: images = Subject (
+"Describe the class in this comment."|
+	theTweet = tweet.
+	theImages = images.
+|)
+('as yet unclassified'
+createPresenter  = (
+	^TweetPresenter new subject: self.
+)) : ()
+class TwitterClient accessToken: token oauth: oauth = (
+"This class provides access to the Twitter REST api."|
+	screenName = token at:'screen_name'.
+	userId = token at:'user_id'.
+	oauthToken = token at:'oauth_token'.
+	oauthTokenSecret = token at:'oauth_token_secret'.
+	OAuth = oauth.
+	
+	twitterHomeTimeline = 'https://api.twitter.com/1/statuses/home_timeline.json'.
+	twitterUserTimeline = 'https://api.twitter.com/1/statuses/user_timeline.json'.
+	twitterUpdateStatus = 'https://api.twitter.com/1/statuses/update.json'.
+|)
+('as yet unclassified'
+getHomeTimeline = (
+     |strm|
+	 strm:: OAuth renew at:'oauth_token' put: oauthToken;
+		get:twitterHomeTimeline usingKey:oauthTokenSecret.
+      ^jsonParser parse: (strm readStream).
+)
+getUserTimeline: lusername = (
+	|strm|
+	 strm:: OAuth renew at:'oauth_token' put: oauthToken;
+	at:'id' put: lusername;
+			get: twitterUserTimeline usingKey: oauthTokenSecret.
+      ^(jsonParser parse: (ReadStream on: strm content)).
+)
+jsonParser  = (
+    ^JSONParser JSONGrammarWithAST new
+)
+updateStatus: statusText = (
+	(OAuth renew at:'status' put:statusText;
+		at: 'oauth_token' put:oauthToken;
+		post:twitterUpdateStatus usingKey: oauthTokenSecret)
+)) : ()
+class TwitterMainPresenter onSubject: s = Presenter onSubject: s (
+"Presenter for the main section of the GUI client."|
+	editor
+	tweetsHolder
+	charCountHolder
+	
+|)
+('as yet unclassified'
+definition ^ <Fragment> = (
+	^column: { 
+           row: { elastic:: blank: 5. link: 'Logout' action: [logout]. }.
+	     row: { label: 'What are you doing?'.} . 
+           row: { elastic:tweetEditor.} . 
+           row: { getCharCountHolder.
+                     filler.
+                     button: 'Update' action:[updateStatus: (editor editedText asString)].
+                     blank: 5.
+                     button: 'Refresh' action:[tweetsHolder refresh].
+                     blank: 5.
+                   } . 
+  	     row: { 
+	             blank: 5.
+	             elastic:: getTweetsHolder }}
+)
+getCharCountHolder = (
+	charCountHolder:: 
+	    holder: [ 
+		label:  (140 -
+                         (editor 
+                              ifNil: [0]
+                              ifNotNil: [(editor editedText ifNil: [editor text]) size])) asString
+		].
+	^charCountHolder
+)
+getTweetsHolder = (
+	tweetsHolder:: initially: (label: 'Loading tweets...')
+		deferred: [ holder: [list: (subject tweets collect: [ :i | i presenter  ])] ].
+	^tweetsHolder.
+)
+logout = (
+	parent window extent: 300@200.
+	sendUp navigatorDo: [:n| n displayPresenter: (LoginPresenter onSubject: LoginSubject new)].
+)
+tweetEditor = (
+	editor:: TextEditorFragment new.
+	editor
+	    changeResponse: [charCountHolder refresh];
+	    acceptResponse: [].
+	^editor
+)
+updateStatus: statusText = (
+      subject updateStatus: statusText.
+	tweetsHolder refresh.
+	editor text:''.
+)) : ()
+class TwitterMainSubject accessToken: token = Subject (
+"Main subject."|
+	twitterClient = TwitterClient accessToken: token oauth:OAuth.
+	data
+	images = Dictionary new.
+|)
+('as yet unclassified'
+createPresenter ^ <Presenter> = (    
+      data:: twitterClient getHomeTimeline.
+	^TwitterMainPresenter new subject: self
+)
+defaultImage = (
+	^(Form extent: 48@48).
+)
+getImage: url = (
+      |skt ext lowerUrl result|
+	lowerUrl:: url asLowercase.
+      ext:: lowerUrl copyFrom: 
+		(lowerUrl findLastOccuranceOfString: '.' startingAt: 1).
+	[
+	skt::  ((Curl CurlRequest url: url) send;result) asByteArray readStream.
+		(ext endsWith: 'jpg') ifTrue: [result:: JPEGReadWriter2 formFromStream:skt.].
+		(ext endsWith: 'gif') ifTrue: [
+			result:: GIFReadWriter formFromStream: skt].
+		(ext endsWith: 'png') ifTrue: [
+		          result::PNGReadWriter formFromStream: skt .
+	]] ifError: [result:: defaultImage].
+	result ifNil:[result:: defaultImage].
+	^ result.
+)
+imagesDictionary = (
+      |tmp|
+	data collect: [:e |  tmp:: e user profile_image_url.
+                                                  (images includesKey: tmp) 
+			                                     ifFalse: [images at: tmp put: (getImage: tmp) ] 
+			                         ].	
+      ^images.
+)
+title = (
+	^'Newspeak Twitter Client'
+)
+tweets = (
+      data:: twitterClient getHomeTimeline.
+	^data collect: [:t | TweetSubject withTweet: t images: imagesDictionary].
+)
+updateStatus: statusText = (
+	twitterClient updateStatus: statusText.
+)) : ()
+class TwitterWindow = HopscotchWindow (|
+|)
+('as yet unclassified'
+addToolbarItemsTo: toolbar = (
+)
+buildMenuBar = (
+	^nil.
+)
+updateToolbar = (
+	
+)) : ('as yet unclassified'
+openSubjectFromBlock: aBlock = (
+	^(withSubjectFromBlock: aBlock) open
+)
+withSubjectFromBlock: aBlock = (
+	| instance |
+	#BOGUS yourself. "copied from HopscotchShell"
+
+	instance:: self new.
+	instance subject: (aBlock value: instance).
+	^instance
+))) : ()
