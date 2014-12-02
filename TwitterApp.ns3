@@ -1,10 +1,10 @@
 Newspeak3
 'Twitter'
 class TwitterApp gui: gui = (
-"This is the class that can be used to launch the Newspeak twitter client.
+(* This is the class that can be used to launch the Newspeak twitter client.
 
 NOTE: To work, the Twitter App requires that you have libcurl installed. If you are in windows, you might need to download it from http://curl.haxx.se/download.html
-"|
+*) |
 TwitterGUI = gui.
 |)
 ('as yet unclassified'

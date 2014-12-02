@@ -1,7 +1,7 @@
 Newspeak3
 'Twitter'
 class OAuth usingPlatform: platform = (
-"Represents an OAuth Dictionary to be passed as a GET/POST args"|
+(* Represents an OAuth Dictionary to be passed as a GET/POST args *)|
 	UUID = platform blackMarket UUID.
 	Date = platform time Date.
 	Time = platform time Time.
@@ -54,9 +54,9 @@ authorize: token = (
 	^ authorizeURL,'?oauth_token=',token.
 )
 currentPosixTime= (
-	"This methods needs to comply with 
+	(* This methods needs to comply with 
 	((Platform nsPlatform Smalltalk globals at:#DateAndTime) now asUnixTime - (Platform nsPlatform OAuth usingPlatform:Platform nsPlatform) currentPosixTime)
-	equals 0."
+	equals 0. *)
 	|posixStart|
 	posixStart:: (Date newDay:1 monthIndex:1 year:1970) subtractDays:4.
 	^ (Date today julian - posixStart julian) * 3600 * 24 + Time now asSeconds.
@@ -102,18 +102,18 @@ signableStringMethod: method url: url = (
 		collect:[:key | key encodeForHTTP,'=', (args at: key) encodeForHTTP]) 			fold:[:a :b | a, '&',b]) encodeForHTTP
 )) : ('as yet unclassified'
 testRequest = (
-	"From http://term.ie/oauth/example/. Request Token test."
+	(* From http://term.ie/oauth/example/. Request Token test. *)
 	|test|
 	test:: OAuth new.
 	test args at:'oauth_callback' put:'oob';
 		at:'oauth_nonce' put:UUID new asString;
-		at:'oauth_timestamp' put:(DateAndTime now asUnixTime asString asNumber + 10800) asString; "To test in GMT -3, we add 10800 seconds."
+		at:'oauth_timestamp' put:(DateAndTime now asUnixTime asString asNumber + 10800) asString; (* To test in GMT -3, we add 10800 seconds. *)
 		at:'oauth_consumer_key' put:'key';
 		at:'oauth_signature' put:(HTTPSocket hmacSha1:(test signableStringMethod:'POST' url:'http://term.ie/oauth/example/request_token.php') usingKey:'secret&') base64Encoded.
 	^ (HTTPSocket HTTPSocket httpPost:'http://term.ie/oauth/example/request_token.php' args:test args accept:'*/*') contents = 'oauth_token=requestkey&oauth_token_secret=requestsecret'
 )
 testSignableStringMethod = (
-"From https://dev.twitter.com/docs/auth/oauth"
+(* From https://dev.twitter.com/docs/auth/oauth *)
 |test|
 	test:: OAuth new.
 	test args at:'oauth_callback' put:'http://localhost:3005/the_dance/process_callback?service_provider_id=11';

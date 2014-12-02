@@ -1,7 +1,7 @@
 Newspeak3
 'Twitter'
 class JSONParser withParserLib: parserLibrary usingLib: platform = (
-"Experiment for JSON parser based on the description from http://www.json.org/fatfree.html "|
+(* Experiment for JSON parser based on the description from http://www.json.org/fatfree.html *)|
 	ExecutableGrammar = parserLibrary ExecutableGrammar.
 	CharParser = parserLibrary CharParser.
 	PredicateTokenParser = parserLibrary PredicateTokenParser.
@@ -11,7 +11,7 @@ class JSONParser withParserLib: parserLibrary usingLib: platform = (
 |)
 (
 class CharExceptForParser = PredicateTokenParser (
-"Parses any character expect for the specified."|
+(* Parses any character expect for the specified. *)|
 
 |)
 ('as yet unclassified'
@@ -19,7 +19,7 @@ for: aChar = (
 	^self accept: [:c | c ~= aChar] errorMsg: ''
 )) : ()
 class JSONGrammar = ExecutableGrammar (
-"Experiment for JSON grammar based on the description from http://www.json.org/fatfree.html "|
+(* Experiment for JSON grammar based on the description from http://www.json.org/fatfree.html *)|
       doubleQuote = (char: $").
       backslash = (char: $\).
 	str = doubleQuote,((backslash, ( char: $" ))   | 
@@ -63,7 +63,7 @@ charExceptFor: aChar = (
 	^CharExceptForParser new for: aChar
 )) : ()
 class JSONGrammarWithAST = JSONGrammar (
-"Parses a JSON File and generates and Ast"|
+(* Parses a JSON File and generates and Ast *)|
 	
 |)
 ('as yet unclassified'
@@ -126,7 +126,7 @@ ttrue = (
 	^super ttrue wrapper: [:o | true].
 )) : ()
 class JSONObject withContent: dContent = (
-"Instances of this class represent JSON objects."|
+(* Instances of this class represent JSON objects. *)|
 	content = dContent.
 |)
 ('as yet unclassified'

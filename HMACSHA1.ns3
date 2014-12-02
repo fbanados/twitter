@@ -1,27 +1,27 @@
 Newspeak3
 'SecureSocket'
 class HMACSHA1 usingPlatform: platform = (
-"This Module allows to sign a string using HMACSHA1 in every current platform for Newspeak. In windows, it uses Microsoft Crypto Libraries and in Mac and Linux expects to find the OpenSSL library (libssl).
+(* This Module allows to sign a string using HMACSHA1 in every current platform for Newspeak. In windows, it uses Microsoft Crypto Libraries and in Mac and Linux expects to find the OpenSSL library (libssl).
 
 How to use it
 
 (HMACSHA1 usingPlatform: platform) hash: content usingKey: key
-"|
+*) |
 	CLibrary = (platform namespace CAPI platform:platform) CLibrary.
 	Alien = platform aliens Alien.
-	win32api = platform namespace Win32API. "Required to give WinCrypt access to windows's getLastError. Unused in Mac/Linux"
+	win32api = platform namespace Win32API. (* Required to give WinCrypt access to windows's getLastError. Unused in Mac/Linux *)
 	VMMirror = platform mirrors vmmirror.
 |)
 (
 class OpenSSL = (
-"Describe the class in this comment."|
+(* Describe the class in this comment. *)|
 	API = Library new.
 |API SSL_load_error_strings value.
 	API ERR_load_BIO_strings value.
 	API SSL_library_init value)
 (
 class Library = CLibrary name:'libssl' (
-"This Class contains only the needed FFI Calls to create an HMACSHA1 using OpenSSL."|
+(* This Class contains only the needed FFI Calls to create an HMACSHA1 using OpenSSL. *)|
 |)
 (''
 ERR_load_BIO_strings = (
@@ -60,13 +60,13 @@ hash: string usingKey: key = (
 	]]]].
 )) : ()
 class WinCrypt = (
-"Describe the class in this comment."|
+(* Describe the class in this comment. *)|
 	API = Library new.
 	getLastError = win32api KernelLibrary new GetLastError.
 |)
 (
 class Library = CLibrary name:'Advapi32' (
-"Describe the class in this comment."|
+(* Describe the class in this comment. *)|
 |)
 ('as yet unclassified'
 CALG_HMAC =(
@@ -82,7 +82,7 @@ CRYPT_VERIFYCONTEXT =(
 	^ 16rF0000000.
 )
 CryptAcquireContextA = (
-	"A is for ANSI"
+	(* A is for ANSI *)
 	^functionNamed:#CryptAcquireContextA argc:5.
 )
 CryptCreateHash = (
@@ -119,20 +119,20 @@ PROV_RSA_FULL =(
 	^ 1.
 )
 sizeofHMAC_INFO = (
-	^ 28"1*sizeofInt+ 2*sizeofpointer +2*sizeofDouble"
+	^ 28(* 1*sizeofInt+ 2*sizeofpointer +2*sizeofDouble *)
 )) : ()'as yet unclassified'
 checkAlienNil: alien <Alien>= (
 	alien asUnsignedLong =0 ifTrue:[windowsError].
 	^ alien.
 )
 hash: string  usingKey: key= (
-	"Following the example code by Microsoft at
+	(* Following the example code by Microsoft at
 	http://msdn.microsoft.com/en-us/library/aa382379(v=VS.85).aspx
-	"
+	*)
 	^(Alien newCString: string) freeAfter:[:string |
 	  (Alien newCString: key) freeAfter:[:key |
 		| HmacInfo hash|
-		"new pointers"
+		(* new pointers *)
 		(Alien newC: 4) freeAfter:[:hProv |
 		(Alien newC: 4) freeAfter:[:hHash |
 		(Alien newC: 4) freeAfter:[:hKey |
@@ -181,7 +181,7 @@ hash: string  usingKey: key= (
 		checkAlienNil: (API CryptGetHashParam
 				value: (Alien forPointer: hHmacHash asUnsignedLong)
 				value: API HP_HASHVAL
-				value: 0 "nil asAlien"
+				value: 0 (* nil asAlien *)
 				value: hashSize pointer
 				value: 0).
 		(Alien newC: hashSize asUnsignedLong) freeAfter:[:hashBuffer |

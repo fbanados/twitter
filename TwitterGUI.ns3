@@ -1,7 +1,7 @@
 Newspeak3
 'Twitter'
 class TwitterGUI usingPlatform: platform = (
-"A little GUI for accessing a Twitter account."|
+(* A little GUI for accessing a Twitter account. *)|
    HopscotchWindow = platform hopscotch core HopscotchWindow.
    Presenter = platform hopscotch core Presenter.
    Subject  = platform hopscotch core Subject.
@@ -30,7 +30,7 @@ class LoginPresenter onSubject: s = Presenter onSubject: s (|
 	username = ''.
 	password = ''.
 |authorizeUrl changeResponse: [].
-"passwordEditor changeResponse: []."
+(* passwordEditor changeResponse: []. *)
 authorizeUrl text:'https://api.twitter.com/oauth/authorize?oauth_token=',(s requestToken at:'oauth_token'))
 ('as yet unclassified'
 definition = (
@@ -69,7 +69,7 @@ title = (
 	^'Newspeak Twitter Client'
 )) : ()
 class LoginSubject onModel: m = Subject onModel: m (
-"Describe the class in this comment."|
+(* Describe the class in this comment. *)|
 	requestToken = OAuth renew requestToken.
 |)
 ('as yet unclassified'
@@ -80,7 +80,7 @@ new = (
 	^onModel: nil
 ))
 class TweetPresenter = Presenter (
-"Presenter for a single tweet."|	
+(* Presenter for a single tweet. *)|	
 |)
 ('as yet unclassified'
 browser = (
@@ -134,7 +134,7 @@ tweetBody = (
 	^result
 )) : ()
 class TweetSubject withTweet: tweet images: images = Subject (
-"Describe the class in this comment."|
+(* Describe the class in this comment. *)|
 	theTweet = tweet.
 	theImages = images.
 |)
@@ -143,7 +143,7 @@ createPresenter  = (
 	^TweetPresenter new subject: self.
 )) : ()
 class TwitterClient accessToken: token oauth: oauth = (
-"This class provides access to the Twitter REST api."|
+(* This class provides access to the Twitter REST api. *)|
 	screenName = token at:'screen_name'.
 	userId = token at:'user_id'.
 	oauthToken = token at:'oauth_token'.
@@ -177,7 +177,7 @@ updateStatus: statusText = (
 		post:twitterUpdateStatus usingKey: oauthTokenSecret)
 )) : ()
 class TwitterMainPresenter onSubject: s = Presenter onSubject: s (
-"Presenter for the main section of the GUI client."|
+(* Presenter for the main section of the GUI client. *)|
 	editor
 	tweetsHolder
 	charCountHolder
@@ -232,7 +232,7 @@ updateStatus: statusText = (
 	editor text:''.
 )) : ()
 class TwitterMainSubject accessToken: token = Subject (
-"Main subject."|
+(* Main subject. *)|
 	twitterClient = TwitterClient accessToken: token oauth:OAuth.
 	data
 	images = Dictionary new.
@@ -295,7 +295,7 @@ openSubjectFromBlock: aBlock = (
 )
 withSubjectFromBlock: aBlock = (
 	| instance |
-	#BOGUS yourself. "copied from HopscotchShell"
+	#BOGUS yourself. (* copied from HopscotchShell *)
 
 	instance:: self new.
 	instance subject: (aBlock value: instance).
