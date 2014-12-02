@@ -1,9 +1,9 @@
 Newspeak3
 'Curl'
 class Curl usingPlatform: platform = (
-"A higher-level wrapper around the raw libcurl API. See the documentation of CurlRequest, which is the main class of this module. CurlSession is pretty much its implementation helper.
+(* A higher-level wrapper around the raw libcurl API. See the documentation of CurlRequest, which is the main class of this module. CurlSession is pretty much its implementation helper.
 
-Copyright (c) 2010 Vassili Bykov"|
+Copyright (c) 2010 Vassili Bykov *)|
 	private CAPI = platform namespace CAPI.
 	private VMMirror = platform mirrors vmmirror.	
 	private api = CurlAPI usingPlatform: platform.
@@ -16,35 +16,35 @@ Copyright (c) 2010 Vassili Bykov"|
 |api addLibrary: curlLibrary)
 (
 class CurlAPI usingPlatform: platform = CAPI platform: platform (
-"The low-level interface to the libcurl library."|
+(* The low-level interface to the libcurl library. *) |
 |)
 (
 class CurlLibrary name: name = CLibrary name: name (
-"This class allows to access curl_easy_* functions from the CURL C library."|
+(* This class allows to access curl_easy_* functions from the CURL C library. *)|
 |)
 ('as yet unclassified'
 curl_easy_cleanup = (
-	"void curl_easy_cleanup(CURL * handle );"
+	(* void curl_easy_cleanup(CURL * handle ); *)
 	^functionNamed: #curl_easy_cleanup argc: 1
 )
 curl_easy_init = (
-	"CURL *curl_easy_init();"
+	(* CURL *curl_easy_init(); *)
 	^functionNamed: #curl_easy_init argc: 0
 )
 curl_easy_perform = (
-	"URLcode curl_easy_perform(CURL * handle );"
+	(* URLcode curl_easy_perform(CURL * handle ); *)
 	^functionNamed: #curl_easy_perform argc: 1
 )
 curl_easy_setopt = (
-	"CURLcode curl_easy_setopt(CURL *handle, CURLoption option, parameter);"
+	(* CURLcode curl_easy_setopt(CURL *handle, CURLoption option, parameter); *)
 	^functionNamed: #curl_easy_setopt argc: 3
 )
 curl_global_cleanup = (
-	"void curl_global_cleanup(void);"
+	(* void curl_global_cleanup(void); *)
 	^functionNamed: #curl_global_cleanup argc: 0
 )
 curl_global_init = (
-	"CURLcode curl_global_init(long flags);"
+	(* CURLcode curl_global_init(long flags); *)
 	^functionNamed: #curl_global_init argc: 1
 )
 exportFunctionsTo: curlApi = (
@@ -113,10 +113,10 @@ CURL_GLOBAL_WIN32 = (
 	^2
 )) : ()
 class CurlRequest url: url <String> = (
-"A request to fetch a document using Curl. An instance is created using the default factory method. It can then be configured by changing its slots such as proxy, sslKey and so on. Finally, send the #send message to actually send the request. The value returned from #send is a libcurl's error code, 0 in case of success. The text received from the server is available by sending #result to the instance. Alternatively, set the resultStream slot before sending the request to a WriteStream that will accept the result."|
+(* A request to fetch a document using Curl. An instance is created using the default factory method. It can then be configured by changing its slots such as proxy, sslKey and so on. Finally, send the #send message to actually send the request. The value returned from #send is a libcurl's error code, 0 in case of success. The text received from the server is available by sending #result to the instance. Alternatively, set the resultStream slot before sending the request to a WriteStream that will accept the result. *)|
 	url_ <String> = url.
 
-	"The following slots are settable by the user to configure the request before sending."
+	(* The following slots are settable by the user to configure the request before sending.*)
 	postFields <String>
 	cookie <String>
 	proxy <String>
@@ -137,7 +137,7 @@ class CurlRequest url: url <String> = (
 |)
 ('as yet unclassified'
 acceptData: args <CurlWriteFunctionArgs> = (
-"This is the callback provided to curl. Called multiple times in the course of receiving data. Must return the number of bytes accepted."
+(* This is the callback provided to curl. Called multiple times in the course of receiving data. Must return the number of bytes accepted. *)
 	| dataSize data |
 	dataSize:: args size * args nmemb.
 	data:: args ptrAlien.
@@ -147,7 +147,7 @@ acceptData: args <CurlWriteFunctionArgs> = (
 	^dataSize
 )
 acceptHeader: args <CurlWriteFunctionArgs> = (
-"This is the callback provided to curl. Called multiple times in the course of receiving data. Must return the number of bytes accepted."
+(* This is the callback provided to curl. Called multiple times in the course of receiving data. Must return the number of bytes accepted. *)
 	| dataSize data header |
 	dataSize:: args size * args nmemb.
 	data:: args ptrAlien.
@@ -189,7 +189,7 @@ setCurlOption: code to: value = (
 	api curl_easy_setopt value: handle value: code value: value
 )
 setCurlOption: code toString: string = (
-"Pass a string option to libcurl, taking care of C string conversion boilerplate."
+(* Pass a string option to libcurl, taking care of C string conversion boilerplate. *)
 	(Alien newCString: string) freeAfter:
 		[:cString |
 		api curl_easy_setopt value: handle value: code value: cString address]
@@ -230,7 +230,7 @@ url = (
 	^url_
 )) : ()
 class CurlSession = (
-"A libcurl session; creating an object opens a session (unless a problem occurs in which case the session returns false to the isOpen message). An open instance can be sent the get: message to send a request for a URL."|
+(* A libcurl session; creating an object opens a session (unless a problem occurs in which case the session returns false to the isOpen message). An open instance can be sent the get: message to send a request for a URL. *)|
 	private handle = 0.
 	private writeCallback
 	private resultStream
@@ -251,7 +251,7 @@ get: url <String> = (
 	cUrl free.
 )
 initializeSession = (
-"Initialization, invoked from the initializer."
+(* Initialization, invoked from the initializer. *)
 	handle:: api curl_easy_init unsignedValue.
 	handle ~= 0 ifTrue:
 		[writeCallback:: api Callback
@@ -262,7 +262,7 @@ isOpen = (
 	^handle ~= 0
 )
 writeData: args <CurlWriteFunctionArgs> = (
-"This method is the writeCallback response code. It should accept the data passed to the callback, available through the argument and return the number of bytes accepted. The number of bytes reported as accepted should be the same as the number of bytes passed in. A mismatch signals an error to libcurl."
+(* This method is the writeCallback response code. It should accept the data passed to the callback, available through the argument and return the number of bytes accepted. The number of bytes reported as accepted should be the same as the number of bytes passed in. A mismatch signals an error to libcurl. *)
 	| dataSize data |
 	dataSize:: args size * args nmemb.
 	data:: args ptrAlien.
