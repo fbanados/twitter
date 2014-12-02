@@ -16,7 +16,7 @@ Copyright (c) 2010 Vassili Bykov *)|
 |api addLibrary: curlLibrary)
 (
 class CurlAPI usingPlatform: platform = CAPI platform: platform (
-(* The low-level interface to the libcurl library. *) |
+(* The low-level interface to the libcurl library. *)|
 |)
 (
 class CurlLibrary name: name = CLibrary name: name (
@@ -58,7 +58,7 @@ exportFunctionsTo: curlApi = (
 )) : ('as yet unclassified'
 libName = (
 	VMMirror isWindows ifTrue: [^ 'libcurl.dll'].
-	VMMirror isUnixMac ifTrue: [^ '/opt/local/lib/libcurl.dylib'].
+	VMMirror isUnixMac ifTrue: [^ 'libcurl.dylib'].
 	^'libcurl.so.4'.
 ))'as yet unclassified'
 CURLOPT_COOKIE = (
